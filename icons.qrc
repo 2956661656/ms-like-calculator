@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/backspace_FILL0_wght400_GRAD0_opsz48.svg</file>
+        <file>icons/dialpad_FILL0_wght400_GRAD0_opsz48.svg</file>
+        <file>icons/binary.png</file>
+    </qresource>
+</RCC>
