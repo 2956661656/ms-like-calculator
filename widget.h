@@ -19,6 +19,7 @@ public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
 private slots:
+
     void on_lineEditResult_textChanged(const QString &arg1);
 
     void numKeyClick();
@@ -46,6 +47,14 @@ private slots:
 
     void on_radioButtonBin_toggled(bool checked);
 
+    void on_pushButtonOpCE_clicked();
+
+    void on_pushButtonOpClean_clicked();
+
+    void on_pushButtonOpBs_clicked();
+
+    void binChanged(bool);
+
 private:
     Ui::Widget *ui;
 
@@ -54,6 +63,7 @@ private:
     long long operate;
     QString Operator;
     int flag;       //用于判断当前是在操作数阶段还是在被操作数阶段
+    QString binArray;
 };
 #endif // WIDGET_H
 
