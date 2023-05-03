@@ -3,6 +3,18 @@
 #include <QDebug>
 #include <map>
 #include <exception>
+#include <QRegExp>
+
+#define WHICH_LAB_IS_CHECKED(L,V) \
+    if(ui->radioButtonBin->isChecked()){\
+        ui->L->setText(QString::number(V, 2));\
+    }else if(ui->radioButtonDec->isChecked()){\
+        ui->L->setText(QString::number(V, 10));\
+    }else if(ui->radioButtonHex->isChecked()){\
+        ui->L->setText(QString::number(V, 16));\
+    }else if(ui->radioButtonOct->isChecked()){\
+        ui->L->setText(QString::number(V, 8));\
+    }
 
 char hexs[] = {'A', 'B', 'C', 'D', 'E', 'F'};
 int decs[] = {0,1,2,3,4,5,6,7,8,9};
@@ -26,6 +38,10 @@ Widget::Widget(QWidget *parent)
     ui->pushButtonNoD->setEnabled(false);
     ui->pushButtonNoE->setEnabled(false);
     ui->pushButtonNoF->setEnabled(false);
+
+    ui->labelBeOp->setAlignment(Qt::AlignRight);
+    ui->labelShowOp->setVisible(false);
+    ui->labelBeOp->setVisible(false);
 
     //当十六进制启用时，启用全部按钮
     for(int i = 0; i < sizeof(hexs)/sizeof(char); ++i){
@@ -70,7 +86,7 @@ Widget::Widget(QWidget *parent)
     connect(ui->pushButtonOpDiv, &QPushButton::clicked, this, &Widget::op);
     connect(ui->pushButtonOpLsh, &QPushButton::clicked, this, &Widget::op);
     connect(ui->pushButtonOpRsh, &QPushButton::clicked, this, &Widget::op);
-    connect(ui->pushButtonOpNot, &QPushButton::clicked, this, &Widget::op);
+    connect(ui->pushButtonOpNot, &QPushButton::clicked, this, &Widget::pushButtonOpNot);		//特殊操作，直接修改lineEditResult的文本
     connect(ui->pushButtonOpXor, &QPushButton::clicked, this, &Widget::op);
     connect(ui->pushButtonOpAnd, &QPushButton::clicked, this, &Widget::op);
     connect(ui->pushButtonOpOr, &QPushButton::clicked, this, &Widget::op);
@@ -94,6 +110,8 @@ Widget::Widget(QWidget *parent)
         /*并且*/if (ui->lineEditResult->text() != "0" || !ui->lineEditResult->text().isEmpty())
                 this->flag = FLAG::BEOP;
         }else if(index == 1){
+            ui->labelBeOp->setVisible(false);
+            ui->labelShowOp->setVisible(false);
             this->flag = FLAG::OP;
             //将每个1的位置的按钮都check,binArray也会自动变为正确数值
             auto strBinArr = ui->labelShowBin->text();
@@ -107,8 +125,10 @@ Widget::Widget(QWidget *parent)
                 if(btObject){
                     if(strBinArr[strBinArrSize - i - 1] == "1"){
                         emit btObject->clicked(true);
+                        btObject->setChecked(true);
                     }else{
                         emit btObject->clicked(false);
+                        btObject->setChecked(false);
                     }
                 }
             }
@@ -121,6 +141,7 @@ Widget::Widget(QWidget *parent)
                     btObject = this->findChild<QPushButton*>("pushButtonBin"+ QString::number(i));
                 if(btObject){
                     emit btObject->clicked(false);      //直接触发 false click
+                    btObject->setChecked(false);
                 }
             }
             //倒着替换
@@ -202,15 +223,18 @@ void Widget::on_lineEditResult_textChanged(const QString &arg1)
             this->operate = arg1.toLongLong(&ok, 8);
     }
     qDebug() << ok << "\t" << this->beOperated;
+    QString binNum;
     if(ok){
         if(flag == FLAG::BEOP){
-            ui->labelShowBin->setText(QString::number(this->beOperated, 2));
+            binNum = QString::number(this->beOperated, 2);
+            ui->labelShowBin->setText(binNum);
             ui->labelShowHex->setText(QString::number(this->beOperated, 16).toUpper());
             ui->labelShowDec->setText(QString::number(this->beOperated));
             ui->labelShowOct->setText(QString::number(this->beOperated, 8));
         }
         if(flag == FLAG::OP){
-            ui->labelShowBin->setText(QString::number(this->operate, 2));
+            binNum = QString::number(this->operate, 2);
+            ui->labelShowBin->setText(binNum);
             ui->labelShowHex->setText(QString::number(this->operate, 16).toUpper());
             ui->labelShowDec->setText(QString::number(this->operate));
             ui->labelShowOct->setText(QString::number(this->operate, 8));
@@ -218,25 +242,40 @@ void Widget::on_lineEditResult_textChanged(const QString &arg1)
     }/*else{
         throw std::runtime_error("进制转换异常：转换前>>" + std::to_string(result) + "\t转换结果：" + std::to_string(ok));
     }*/
+
+    qDebug() << ui->labelShowBin->text();
+
+    //还需要修改binArray
+    auto strBinArrSize = binNum.size();
+    for(int i = 0; i < strBinArrSize; ++i)
+        this->binArray.replace(64 - i -1, 1, binNum[strBinArrSize-i-1]);       //{64减}相当于倒着修改binArray
+//    for(int i = strBinArrSize + 1; i < 64; ++i){
+        //将每一位不相关的都置为零
+//        this->binArray.replace(i, 1, '0');
+//    }
+
 }
 
-//std::map<QString, QString> nameToSymbol{
-//    {"pushButtonOpPlus", "+"}
-//    ,{"pushButtonOpMin", "-"}
-//    ,{"pushButtonOpMult", "*"}
-//    ,{"pushButtonOpDiv", "/"}
-//    ,{"pushButtonOpLsh", "<<"}
-//    ,{"pushButtonOpRsh", ">>"}
-//    ,{"pushButtonOpNot", "!"}
-//    ,{"pushButtonOpXor", "^"}
-//    ,{"pushButtonOpAnd", "&"}
-//    ,{"pushButtonOpOr", "|"}
-//    ,{"pushButtonOpMod", "%"}
-//};
+std::map<QString, QString> nameToSymbol{
+    {"pushButtonOpPlus", "+"}
+    ,{"pushButtonOpMin", "-"}
+    ,{"pushButtonOpMult", "*"}
+    ,{"pushButtonOpDiv", "/"}
+    ,{"pushButtonOpLsh", "<<"}
+    ,{"pushButtonOpRsh", ">>"}
+    ,{"pushButtonOpNot", "!"}
+    ,{"pushButtonOpXor", "^"}
+    ,{"pushButtonOpAnd", "&"}
+    ,{"pushButtonOpOr", "|"}
+    ,{"pushButtonOpMod", "%"}
+};
 
 bool isContinuousCalculation = false;       //不允许连续点击计算
+bool isContinuousOp = false;		//不允许连续点击加减等操作
 //每个操作Op点击后都需要将result清空并在result前一行增加一个label用于记录被操作数
 void Widget::op(){
+    auto senderName = sender()->objectName();
+    if(isContinuousOp && senderName == Operator) return;
     //如果flag为op,调用一次计算操作
     if(flag == FLAG::OP)
         on_pushButtonOpCalculate_clicked();
@@ -252,25 +291,30 @@ void Widget::op(){
             this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 8);
     }
     //将lineEditResult清空
-    ui->lineEditResult->blockSignals(true);
-    ui->lineEditResult->setText(QString("0"));
-    ui->labelShowBin->setText(QString("0"));
-    ui->labelShowDec->setText(QString("0"));
-    ui->labelShowHex->setText(QString("0"));
-    ui->labelShowOct->setText(QString("0"));
-    ui->lineEditResult->blockSignals(false);
+//    if(!isContinuousOp){
+        ui->lineEditResult->blockSignals(true);
+        ui->lineEditResult->setText(QString("0"));
+        ui->labelShowBin->setText(QString("0"));
+        ui->labelShowDec->setText(QString("0"));
+        ui->labelShowHex->setText(QString("0"));
+        ui->labelShowOct->setText(QString("0"));
+        ui->lineEditResult->blockSignals(false);
+//    }
     //增加一个用于显示被操作数的组件，并设置文本：beOperated
+    ui->labelBeOp->show();
+    WHICH_LAB_IS_CHECKED(labelBeOp, beOperated);
 
     //将operator设置为与sender()->name()相同的符号
-    auto senderName = sender()->objectName();
     this->Operator = senderName;
-//    if(nameToSymbol.find(senderName) != nameToSymbol.end()){
-//        this->Operator = nameToSymbol[senderName];
-//    }else{
-//        qDebug() << "未找到与信号发送者相同的符号";
-//    }
+    ui->labelShowOp->show();
+    if(nameToSymbol.find(senderName) != nameToSymbol.end()){
+        ui->labelShowOp->setText(nameToSymbol[senderName]);
+    }else{
+        qDebug() << "未找到与信号发送者相同的符号";
+    }
 
     //修改标志位
+    isContinuousOp = true;
     this->flag = FLAG::OP;
     isContinuousCalculation = false;        //不是连续计算
 }
@@ -304,37 +348,57 @@ void Widget::pushButtonOpDiv()
 void Widget::pushButtonOpLsh()
 {
 
+    this->result = this->beOperated << this->operate;
+    this->beOperated = result;
 }
 
 void Widget::pushButtonOpRsh()
 {
-
-}
-
-void Widget::pushButtonOpNot()
-{
-
+    this->result = this->beOperated >> this->operate;
+    this->beOperated = result;
 }
 
 void Widget::pushButtonOpXor()
 {
-
+    this->result = this->beOperated / this->operate;
+    this->beOperated = result;
 }
 
 void Widget::pushButtonOpAnd()
 {
-
+    this->result = this->beOperated / this->operate;
+    this->beOperated = result;
 }
 
 void Widget::pushButtonOpOr()
 {
-
+    this->result = this->beOperated / this->operate;
+    this->beOperated = result;
 }
 
 void Widget::pushButtonOpMod()
 {
     this->result = this->beOperated % this->operate;
     this->beOperated = result;
+}
+
+void Widget::pushButtonOpNot()
+{
+    QRegExp rx("[01]");  // 定义一个正则表达式，用于匹配二进制字符
+    int pos = 0;
+    while ((pos = rx.indexIn(binArray, pos)) != -1) {
+            QString s = rx.cap(0);
+            QString replacement = s == "0" ? "1" : "0";
+            binArray.replace(pos, 1, replacement);
+            pos += rx.matchedLength();
+    }
+    //将binArray转换为十进制
+    bool ok = false;
+    long long dec = binArray.toLongLong(&ok, 2);
+    //再将十进制转换为选中的进制
+    if(ok){
+            WHICH_LAB_IS_CHECKED(lineEditResult, dec);
+    }
 }
 
 //如果是主动点击，将结果显示在lineEditResult，并修改标志位为BEOP —— 主动调用时，调用者的名字为calculate
@@ -350,19 +414,13 @@ void Widget::on_pushButtonOpCalculate_clicked()
     //调用与信号发送方名字相同的函数
     if(senderName == "pushButtonOpCalculate"){
         //如果是主动调用
-        if(ui->radioButtonBin->isChecked()){
-            ui->lineEditResult->setText(QString::number(result, 2));
-        }else if(ui->radioButtonDec->isChecked()){
-            ui->lineEditResult->setText(QString::number(result, 10));
-        }else if(ui->radioButtonHex->isChecked()){
-            ui->lineEditResult->setText(QString::number(result, 16));
-        }else if(ui->radioButtonOct->isChecked()){
-            ui->lineEditResult->setText(QString::number(result, 8));
-        }
+        WHICH_LAB_IS_CHECKED(lineEditResult, result);
 //        flag = FLAG::BEOP;    //不应在此修改标志位，应该点击C/CE之后修改
     }
     isContinuousCalculation = true;     //不允许连续点击计算
     //将计算结果同时保存到result和beOperated-->由各个操作完成
+
+    isContinuousOp = false;
 }
 
 void Widget::on_radioButtonHex_toggled(bool checked)
@@ -401,6 +459,10 @@ void Widget::on_pushButtonOpCE_clicked()
     ui->labelShowDec->setText(QString("0"));
     ui->labelShowHex->setText(QString("0"));
     ui->labelShowOct->setText(QString("0"));
+    ui->labelShowOp->setText("");
+    ui->labelShowOp->setVisible(false);
+    ui->labelBeOp->setText("");
+    ui->labelBeOp->setVisible("false");
 }
 
 
@@ -437,21 +499,14 @@ void Widget::binChanged(bool beChecked)
     btObj->setText(beChecked ? "1" : "0");
 
     auto btIndex = sender()->objectName().right(2);
-    this->binArray.replace(64 - btIndex.toInt(), 1, beChecked? '1': '0');       //{64减}相当于倒着修改binArray
+    this->binArray.replace(64 - btIndex.toInt() -1, 1, beChecked? '1': '0');       //{64减}相当于倒着修改binArray
 
     //将binArray转换为十进制
     bool ok = false;
     long long dec = binArray.toLongLong(&ok, 2);
+    //再将十进制转换为选中的进制
     if(ok){
-        if(ui->radioButtonBin->isChecked()){
-            ui->lineEditResult->setText(QString::number(dec, 2));
-        }else if(ui->radioButtonDec->isChecked()){
-            ui->lineEditResult->setText(QString::number(dec, 10));
-        }else if(ui->radioButtonHex->isChecked()){
-            ui->lineEditResult->setText(QString::number(dec, 16));
-        }else if(ui->radioButtonOct->isChecked()){
-            ui->lineEditResult->setText(QString::number(dec, 8));
-        }
+        WHICH_LAB_IS_CHECKED(lineEditResult, dec);
     }
 }
 

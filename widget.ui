@@ -15,6 +15,30 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="QLabel" name="labelBeOp">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelShowOp">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QLineEdit" name="lineEditResult">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -717,19 +741,6 @@
          </property>
         </widget>
        </item>
-       <item row="0" column="14" colspan="2">
-        <spacer name="horizontalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>3</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
        <item row="0" column="8">
         <widget class="QPushButton" name="pushButtonBin56">
          <property name="maximumSize">
@@ -1341,7 +1352,7 @@
         </widget>
        </item>
        <item row="6" column="9">
-        <widget class="QLabel" name="label_6">
+        <widget class="QLabel" name="labelGap2">
          <property name="text">
           <string/>
          </property>
@@ -1768,7 +1779,7 @@
         </widget>
        </item>
        <item row="6" column="15">
-        <widget class="QLabel" name="label_41">
+        <widget class="QLabel" name="labelGap3">
          <property name="text">
           <string/>
          </property>
@@ -2183,7 +2194,7 @@
         </widget>
        </item>
        <item row="6" column="4">
-        <widget class="QLabel" name="label_5">
+        <widget class="QLabel" name="labelGap1">
          <property name="text">
           <string/>
          </property>
