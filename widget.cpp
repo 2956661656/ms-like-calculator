@@ -360,19 +360,19 @@ void Widget::pushButtonOpRsh()
 
 void Widget::pushButtonOpXor()
 {
-    this->result = this->beOperated / this->operate;
+    this->result = this->beOperated ^ this->operate;
     this->beOperated = result;
 }
 
 void Widget::pushButtonOpAnd()
 {
-    this->result = this->beOperated / this->operate;
+    this->result = this->beOperated & this->operate;
     this->beOperated = result;
 }
 
 void Widget::pushButtonOpOr()
 {
-    this->result = this->beOperated / this->operate;
+    this->result = this->beOperated | this->operate;
     this->beOperated = result;
 }
 
