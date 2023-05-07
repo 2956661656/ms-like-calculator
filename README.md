@@ -1,5 +1,5 @@
 # ms-like-calculator
-类似微软计算器的qt项目    Qt project similar to microsoft calculator
+类似微软计算器的qt项目    Qt project similar to microsoft calculator<br>
 该项目仅包含程序员计算器部分。    This project just contain part of programmer's calculator.
 # 开发中...    Devleping...
 
