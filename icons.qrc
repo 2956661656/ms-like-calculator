@@ -3,7 +3,7 @@
         <file>icons/backspace_FILL0_wght400_GRAD0_opsz48.svg</file>
         <file>icons/dialpad_FILL0_wght400_GRAD0_opsz48.svg</file>
         <file>icons/binary.png</file>
-        <file>icons/切换.svg</file>
         <file>icons/more_time_FILL0_wght400_GRAD0_opsz48.svg</file>
+        <file>icons/switch.svg</file>
     </qresource>
 </RCC>

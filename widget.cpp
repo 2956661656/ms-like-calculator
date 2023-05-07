@@ -4,8 +4,9 @@
 #include <map>
 #include <exception>
 #include <QRegExp>
+#include <QStandardItemModel>
 
-#define WHICH_LAB_IS_CHECKED(L,V) \
+#define ACCORDING_TO_BECHEAKED_LAB_TO_CHANGE(L,V) \
     if(ui->radioButtonBin->isChecked()){\
         ui->L->setText(QString::number(V, 2));\
     }else if(ui->radioButtonDec->isChecked()){\
@@ -15,6 +16,9 @@
     }else if(ui->radioButtonOct->isChecked()){\
         ui->L->setText(QString::number(V, 8));\
     }
+
+bool isContinuousCalculation = false;       //不允许连续点击计算
+bool isContinuousOp = false;		//不允许连续点击加减等操作
 
 char hexs[] = {'A', 'B', 'C', 'D', 'E', 'F'};
 int decs[] = {0,1,2,3,4,5,6,7,8,9};
@@ -27,6 +31,9 @@ Widget::Widget(QWidget *parent)
     ui->setupUi(this);
     this->setWindowTitle("Calculator");
     ui->radioButtonDec->setChecked(true);
+
+    QFont font("Arial", 26, QFont::Bold);
+    ui->lineEditResult->setFont(font);
 
     ui->lineEditResult->setAlignment(Qt::AlignRight);
 //    ui->lineEditResult->setEnabled(false);
@@ -42,6 +49,7 @@ Widget::Widget(QWidget *parent)
     ui->labelBeOp->setAlignment(Qt::AlignRight);
     ui->labelShowOp->setVisible(false);
     ui->labelBeOp->setVisible(false);
+    ui->labelOp->setVisible(false);
 
     //当十六进制启用时，启用全部按钮
     for(int i = 0; i < sizeof(hexs)/sizeof(char); ++i){
@@ -112,6 +120,7 @@ Widget::Widget(QWidget *parent)
         }else if(index == 1){
             ui->labelBeOp->setVisible(false);
             ui->labelShowOp->setVisible(false);
+            ui->labelOp->setVisible(false);
             this->flag = FLAG::OP;
             //将每个1的位置的按钮都check,binArray也会自动变为正确数值
             auto strBinArr = ui->labelShowBin->text();
@@ -168,17 +177,21 @@ void Widget::numKeyClick(){
         ui->lineEditResult->clear();
     }
     auto senderName = sender()->objectName();
-    ui->lineEditResult->insert(QString(senderName.back()));
+    ui->lineEditResult->insert(QString(senderName.back().toUpper()));
 
+    isContinuousCalculation = false;
+    isContinuousOp = false;
 }
 
-void Widget::on_lineEditResult_textChanged(const QString &arg1)
+//CHECK TODO UPDATE 改变就更新操作数会增加cpu计算量
+//应该在点击操作后更新被操作数，在点击计算后更新被操作数和结果
+void Widget::on_lineEditResult_textChanged(const QString &txt)
 {
-    if(arg1 == "0" && flag == FLAG::BEOP) return;
+    if(txt == "0" && flag == FLAG::BEOP) return;
     //如果result中出现了A-F,禁用其他进制按钮
     //如果result中出现了A-F,8，9,禁用8进制和2进制按钮
     //如果result中出现了A-F,2-9,禁用2进制按钮
-    if(arg1.contains(QRegExp("[A-F]"))){
+    if(txt.contains(QRegExp("[A-F]"))){
         ui->radioButtonBin->setEnabled(false);
         ui->radioButtonDec->setEnabled(false);
         ui->radioButtonOct->setEnabled(false);
@@ -187,68 +200,38 @@ void Widget::on_lineEditResult_textChanged(const QString &arg1)
         ui->radioButtonDec->setEnabled(true);
         ui->radioButtonOct->setEnabled(true);
     }
-    if(arg1.contains(QRegExp("[A-F89]"))){
+    if(txt.contains(QRegExp("[A-F89]"))){
         ui->radioButtonBin->setEnabled(false);
         ui->radioButtonOct->setEnabled(false);
     }else{
         ui->radioButtonBin->setEnabled(true);
         ui->radioButtonOct->setEnabled(true);
     }
-    if(arg1.contains(QRegExp("[A-F2-9]"))){
+    if(txt.contains(QRegExp("[A-F2-9]"))){
         ui->radioButtonBin->setEnabled(false);
     }else{
         ui->radioButtonBin->setEnabled(true);
     }
-    //更新各个进制label的内容
-    bool ok = false;
-    if(ui->radioButtonBin->isChecked()){
-        if(flag == FLAG::BEOP)
-            this->beOperated = arg1.toLongLong(&ok, 2);
-        if(flag == FLAG::OP)
-            this->operate = arg1.toLongLong(&ok, 2);
-    }else if(ui->radioButtonDec->isChecked()){
-        if(flag == FLAG::BEOP)
-            this->beOperated = arg1.toLongLong(&ok, 10);
-        if(flag == FLAG::OP)
-            this->operate = arg1.toLongLong(&ok, 10);
-    }else if(ui->radioButtonHex->isChecked()){
-        if(flag == FLAG::BEOP)
-            this->beOperated = arg1.toLongLong(&ok, 16);
-        if(flag == FLAG::OP)
-            this->operate = arg1.toLongLong(&ok, 16);
-    }else if(ui->radioButtonOct->isChecked()){
-        if(flag == FLAG::BEOP)
-            this->beOperated = arg1.toLongLong(&ok, 8);
-        if(flag == FLAG::OP)
-            this->operate = arg1.toLongLong(&ok, 8);
-    }
-    qDebug() << ok << "\t" << this->beOperated;
-    QString binNum;
-    if(ok){
-        if(flag == FLAG::BEOP){
-            binNum = QString::number(this->beOperated, 2);
-            ui->labelShowBin->setText(binNum);
-            ui->labelShowHex->setText(QString::number(this->beOperated, 16).toUpper());
-            ui->labelShowDec->setText(QString::number(this->beOperated));
-            ui->labelShowOct->setText(QString::number(this->beOperated, 8));
-        }
-        if(flag == FLAG::OP){
-            binNum = QString::number(this->operate, 2);
-            ui->labelShowBin->setText(binNum);
-            ui->labelShowHex->setText(QString::number(this->operate, 16).toUpper());
-            ui->labelShowDec->setText(QString::number(this->operate));
-            ui->labelShowOct->setText(QString::number(this->operate, 8));
-        }
-    }/*else{
-        throw std::runtime_error("进制转换异常：转换前>>" + std::to_string(result) + "\t转换结果：" + std::to_string(ok));
-    }*/
 
+    //更新各个标签
+    bool ok = false;
+    long long numShow = txt.toLongLong();
+    if(ui->radioButtonBin->isChecked()){
+            numShow = txt.toLongLong(&ok, 2);
+    }else if(ui->radioButtonDec->isChecked()){
+            numShow = txt.toLongLong(&ok, 10);
+    }else if(ui->radioButtonHex->isChecked()){
+            numShow = txt.toLongLong(&ok, 16);
+    }else if(ui->radioButtonOct->isChecked()){
+            numShow = txt.toLongLong(&ok, 8);
+    }
     qDebug() << ui->labelShowBin->text();
 
-    //还需要修改binArray
-    auto strBinArrSize = binNum.size();
-    for(int i = 0; i < strBinArrSize; ++i)
-        this->binArray.replace(64 - i -1, 1, binNum[strBinArrSize-i-1]);       //{64减}相当于倒着修改binArray
+    ui->labelShowBin->setText(QString::number(numShow, 2));
+    ui->labelShowHex->setText(QString::number(numShow, 16).toUpper());
+    ui->labelShowDec->setText(QString::number(numShow));
+    ui->labelShowOct->setText(QString::number(numShow, 8));
+
 //    for(int i = strBinArrSize + 1; i < 64; ++i){
         //将每一位不相关的都置为零
 //        this->binArray.replace(i, 1, '0');
@@ -270,26 +253,29 @@ std::map<QString, QString> nameToSymbol{
     ,{"pushButtonOpMod", "%"}
 };
 
-bool isContinuousCalculation = false;       //不允许连续点击计算
-bool isContinuousOp = false;		//不允许连续点击加减等操作
+
 //每个操作Op点击后都需要将result清空并在result前一行增加一个label用于记录被操作数
 void Widget::op(){
     auto senderName = sender()->objectName();
     if(isContinuousOp && senderName == Operator) return;
     //如果flag为op,调用一次计算操作
-    if(flag == FLAG::OP)
+    if(flag == FLAG::OP){
         on_pushButtonOpCalculate_clicked();
-    //将lineEditResult里的值保存到beOperated       TODO 计算操作实现之后删除此操作 FOR重复 *?
-    bool ok = false;
-    if(ui->radioButtonBin->isChecked()){
-            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 2);
-    }else if(ui->radioButtonDec->isChecked()){
-            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 10);
-    }else if(ui->radioButtonHex->isChecked()){
-            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 16);
-    }else if(ui->radioButtonOct->isChecked()){
-            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 8);
+        //op阶段，标签应为不可见
+        ui->labelOp->setVisible(false);
     }
+    //将lineEditResult里的值保存到beOperated       TODO 计算操作实现之后删除此操作 FOR重复 *?
+    updateBeOpNum(ui->lineEditResult->text());
+//    bool ok = false;
+//    if(ui->radioButtonBin->isChecked()){
+//            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 2);
+//    }else if(ui->radioButtonDec->isChecked()){
+//            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 10);
+//    }else if(ui->radioButtonHex->isChecked()){
+//            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 16);
+//    }else if(ui->radioButtonOct->isChecked()){
+//            this->beOperated = ui->lineEditResult->text().toLongLong(&ok, 8);
+//    }
     //将lineEditResult清空
 //    if(!isContinuousOp){
         ui->lineEditResult->blockSignals(true);
@@ -302,9 +288,9 @@ void Widget::op(){
 //    }
     //增加一个用于显示被操作数的组件，并设置文本：beOperated
     ui->labelBeOp->show();
-    WHICH_LAB_IS_CHECKED(labelBeOp, beOperated);
+    ACCORDING_TO_BECHEAKED_LAB_TO_CHANGE(labelBeOp, beOperated);
 
-    //将operator设置为与sender()->name()相同的符号
+    //将operator设置为与sender()->name()相同的符号   TODO 在点击计算后再更新
     this->Operator = senderName;
     ui->labelShowOp->show();
     if(nameToSymbol.find(senderName) != nameToSymbol.end()){
@@ -324,62 +310,51 @@ void Widget::op(){
 void Widget::pushButtonOpPlus()
 {
     this->result = this->beOperated + this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpMin()
 {
     this->result = this->beOperated - this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpMult()
 {
     this->result = this->beOperated * this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpDiv()
 {
     this->result = this->beOperated / this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpLsh()
 {
-
     this->result = this->beOperated << this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpRsh()
 {
     this->result = this->beOperated >> this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpXor()
 {
     this->result = this->beOperated ^ this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpAnd()
 {
     this->result = this->beOperated & this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpOr()
 {
     this->result = this->beOperated | this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpMod()
 {
     this->result = this->beOperated % this->operate;
-    this->beOperated = result;
 }
 
 void Widget::pushButtonOpNot()
@@ -387,17 +362,17 @@ void Widget::pushButtonOpNot()
     QRegExp rx("[01]");  // 定义一个正则表达式，用于匹配二进制字符
     int pos = 0;
     while ((pos = rx.indexIn(binArray, pos)) != -1) {
-            QString s = rx.cap(0);
-            QString replacement = s == "0" ? "1" : "0";
-            binArray.replace(pos, 1, replacement);
-            pos += rx.matchedLength();
+        QString s = rx.cap(0);
+        QString replacement = s == "0" ? "1" : "0";
+        binArray.replace(pos, 1, replacement);
+        pos += rx.matchedLength();
     }
     //将binArray转换为十进制
     bool ok = false;
     long long dec = binArray.toLongLong(&ok, 2);
     //再将十进制转换为选中的进制
     if(ok){
-            WHICH_LAB_IS_CHECKED(lineEditResult, dec);
+        ACCORDING_TO_BECHEAKED_LAB_TO_CHANGE(lineEditResult, dec);
     }
 }
 
@@ -407,6 +382,12 @@ void Widget::on_pushButtonOpCalculate_clicked()
 {
     if(isContinuousCalculation) return;
     if(Operator.isEmpty()) return;
+    //调用方法之前更新一次操作数
+    updateOpNum(ui->lineEditResult->text());
+    //显示操作数历史
+    ui->labelOp->show();
+    ACCORDING_TO_BECHEAKED_LAB_TO_CHANGE(labelOp, this->operate);
+    //调用计算操作
     QMetaObject::invokeMethod(this, Operator.toUtf8().data());
     auto senderName = sender()->objectName();
     qDebug() << senderName;
@@ -414,12 +395,26 @@ void Widget::on_pushButtonOpCalculate_clicked()
     //调用与信号发送方名字相同的函数
     if(senderName == "pushButtonOpCalculate"){
         //如果是主动调用
-        WHICH_LAB_IS_CHECKED(lineEditResult, result);
+        ACCORDING_TO_BECHEAKED_LAB_TO_CHANGE(lineEditResult, result);
 //        flag = FLAG::BEOP;    //不应在此修改标志位，应该点击C/CE之后修改
     }
-    isContinuousCalculation = true;     //不允许连续点击计算
-    //将计算结果同时保存到result和beOperated-->由各个操作完成
+    //每次计算完成，都要保存记录到ListViewHistory
+    static int record = 0;
+    static QStandardItemModel *model = new QStandardItemModel(this);
+    QStandardItem *item = new QStandardItem(QString::number(record++)
+                                            + ".    "
+                                            + ui->labelBeOp->text()
+                                            + ui->labelShowOp->text()
+                                            + ui->labelOp->text()
+                                            + "="
+                                            + ui->lineEditResult->text());
+    model->insertRow(0, item);
+    ui->listViewHistory->setModel(model);
 
+    //将计算结果同时保存到result和beOperated-->由各个操作完成
+    this->beOperated = result;
+
+    isContinuousCalculation = true;     //不允许连续点击计算
     isContinuousOp = false;
 }
 
@@ -462,7 +457,9 @@ void Widget::on_pushButtonOpCE_clicked()
     ui->labelShowOp->setText("");
     ui->labelShowOp->setVisible(false);
     ui->labelBeOp->setText("");
-    ui->labelBeOp->setVisible("false");
+    ui->labelBeOp->setVisible(false);
+    ui->labelOp->setText("");
+    ui->labelOp->setVisible(false);
 }
 
 
@@ -506,8 +503,66 @@ void Widget::binChanged(bool beChecked)
     long long dec = binArray.toLongLong(&ok, 2);
     //再将十进制转换为选中的进制
     if(ok){
-        WHICH_LAB_IS_CHECKED(lineEditResult, dec);
+        ACCORDING_TO_BECHEAKED_LAB_TO_CHANGE(lineEditResult, dec);
     }
+}
+
+void Widget::updateOpNum(QString opNum)
+{
+    //更新各个进制label的内容
+    bool ok = false;
+    if(ui->radioButtonBin->isChecked()){
+            this->operate = opNum.toLongLong(&ok, 2);
+    }else if(ui->radioButtonDec->isChecked()){
+            this->operate = opNum.toLongLong(&ok, 10);
+    }else if(ui->radioButtonHex->isChecked()){
+            this->operate = opNum.toLongLong(&ok, 16);
+    }else if(ui->radioButtonOct->isChecked()){
+            this->operate = opNum.toLongLong(&ok, 8);
+    }
+    qDebug() << ok << "\t" << this->beOperated;
+    if(ok){
+            binNum = QString::number(this->beOperated, 2);
+            ui->labelShowBin->setText(binNum);
+            ui->labelShowHex->setText(QString::number(this->beOperated, 16).toUpper());
+            ui->labelShowDec->setText(QString::number(this->beOperated));
+            ui->labelShowOct->setText(QString::number(this->beOperated, 8));
+    }/*else{
+        throw std::runtime_error("进制转换异常：转换前>>" + std::to_string(result) + "\t转换结果：" + std::to_string(ok));
+    }*/
+}
+
+void Widget::updateBeOpNum(QString beOpNum)
+{    //更新各个进制label的内容
+    bool ok = false;
+    if(ui->radioButtonBin->isChecked()){
+            this->beOperated = beOpNum.toLongLong(&ok, 2);
+    }else if(ui->radioButtonDec->isChecked()){
+            this->beOperated = beOpNum.toLongLong(&ok, 10);
+    }else if(ui->radioButtonHex->isChecked()){
+            this->beOperated = beOpNum.toLongLong(&ok, 16);
+    }else if(ui->radioButtonOct->isChecked()){
+            this->beOperated = beOpNum.toLongLong(&ok, 8);
+    }
+    qDebug() << ok << "\t" << this->beOperated;
+    if(ok){
+            binNum = QString::number(this->operate, 2);
+            ui->labelShowBin->setText(binNum);
+            ui->labelShowHex->setText(QString::number(this->operate, 16).toUpper());
+            ui->labelShowDec->setText(QString::number(this->operate));
+            ui->labelShowOct->setText(QString::number(this->operate, 8));
+    }/*else{
+        throw std::runtime_error("进制转换异常：转换前>>" + std::to_string(result) + "\t转换结果：" + std::to_string(ok));
+    }*/
+
+}
+
+void Widget::updateBinStr()
+{
+    //还需要修改binArray
+    auto strBinArrSize = binNum.size();
+    for(int i = 0; i < strBinArrSize; ++i)
+        this->binArray.replace(64 - i -1, 1, binNum[strBinArrSize-i-1]);       //{64减}相当于倒着修改binArray
 }
 
 
