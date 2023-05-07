@@ -55,6 +55,10 @@ private slots:
 
     void binChanged(bool);
 
+    void updateOpNum(QString);
+    void updateBeOpNum(QString);
+    void updateBinStr();
+
 private:
     Ui::Widget *ui;
 
@@ -63,7 +67,8 @@ private:
     long long operate;
     QString Operator;
     int flag;       //用于判断当前是在操作数阶段还是在被操作数阶段
-    QString binArray;
+    QString binArray;       //用于保存64位二进制
+    QString binNum;     //保存每次操作后的二进制数,用于将更新binArray
 };
 #endif // WIDGET_H
 
